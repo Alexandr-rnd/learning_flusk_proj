@@ -1,7 +1,7 @@
 # learning_flusk_proj
 new project for learning back-end development
  
-Что сделано:
+Основной путь настройки проекта:
 **установелен pyenv** 
     curl https://pyenv.run | bash
 
@@ -25,3 +25,14 @@ pyenv local 3.10
 curl -sSL https://install.python-poetry.org | python3 -
 
 poetry init
+
+**Используется линтер ruff**
+
+проект использует базовые возможности flask  и flask-admid 
+
+основные кейсы: 
+    1 авторизация в админку  по "username" и "password" и проверка роли == 'Admin'
+    2 создание пользователя через форму регистрации 
+    3 CRUD с пользователями на форме админки связь с ролями 
+    4 СRUD с ролями 
+    5 CRUD с постави связанными с авторами 
