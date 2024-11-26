@@ -2,9 +2,7 @@ from incialization_module import iniciation_view
 from init_app import db, admin, app
 import logging
 
-# Настройка логирования
-logging.basicConfig(level=logging.DEBUG,  # Уровень логирования
-                    format='%(asctime)s - %(levelname)s - %(message)s')  # Формат логов
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 if __name__ == '__main__':
@@ -12,4 +10,3 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run()
-

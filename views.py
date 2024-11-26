@@ -4,8 +4,17 @@ from init_app import db, app
 from models import User, Role, Post
 
 from flask import render_template, request, redirect, url_for, flash
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_login import logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from init_app import login_manager
+from flask.views import MethodView
+from flask import render_template, flash, redirect, url_for, request
+from flask_login import login_user
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 class UserQuerySelectField(QuerySelectField):
@@ -20,7 +29,7 @@ class UserQuerySelectField(QuerySelectField):
             yield (pk, self.get_label(obj), pk == str(self.data), {})
 
 
-class PostQuerySelectField(QuerySelectField):
+class AutorQuerySelectField(QuerySelectField):
     def populate_obj(self, obj: Post, name: str) -> None:
         obj.author_id = self.data.id
 
@@ -60,7 +69,7 @@ class PostAdmin(ModelView):
     form_columns = ('title', 'content', 'author_id')
 
     form_extra_fields = {
-        'author_id': PostQuerySelectField(
+        'author_id': AutorQuerySelectField(
             label='Автор',
             query_factory=lambda: db.session.query(User).all(),
         ),
@@ -74,18 +83,12 @@ class RoleAdmin(ModelView):
     form_columns = ('name',)
 
 
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+class RegisterView(MethodView):
 
+    def get(self):
+        return render_template('register.html')
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
+    def post(self):
         username = request.form['username']
         email = request.form['email']
         password = generate_password_hash(request.form['password'])
@@ -93,40 +96,59 @@ def register():
         db.session.add(new_user)
         db.session.commit()
         return redirect(url_for('login'))
-    return render_template('register.html')
 
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        user = None
+register_view = RegisterView.as_view('register')
+app.add_url_rule('/register', view_func=register_view, methods=['GET', 'POST'])
+
+
+class LoginView(MethodView):
+    def get(self):
+        return render_template('login.html')
+
+    def post(self):
         try:
-            user = User.query.filter_by(username=request.form['username']).one()
-        except Exception as e:
-            print(f"Exception getting user: {e}")
-        try:
-            if (user and check_password_hash(user.password, request.form['password']) or user.password ==
-                    request.form['password']):
-                if user.role is None:
-                    pass
-                elif user.role.name == 'Admin':
-                    login_user(user)
-                    return redirect(url_for('admin.index'))
-                flash('You are not real ADMIN!', 'error')
-                return render_template('login.html')
+            user = self.get_user(request.form['username'])
+            if self.validate_user(user, request.form['password']):
+                return self.handle_successful_auth(user)
             else:
                 flash('Invalid email or password. Please try again.', 'error')
                 return render_template('login.html')
         except Exception as e:
-            print(f"Exception login: {e}")
-    else:
+            print(f"Exception during login: {e}")
+            return render_template('login.html')
+
+    def get_user(self, username):
+        try:
+            return User.query.filter_by(username=username).one()
+        except Exception as e:
+            print(f"Exception getting user: {e}")
+            return None
+
+    def validate_user(self, user, password):
+        if not user:
+            return False
+        return (check_password_hash(user.password, password) or
+                user.password == password)
+
+    def handle_successful_auth(self, user):
+        if user.role is None:
+            flash("You are havn't any role", 'error')
+            return render_template('login.html')
+        elif user.role.name == 'Admin':
+            login_user(user)
+            return redirect(url_for('admin.index'))
+        flash('You are not real ADMIN!', 'error')
         return render_template('login.html')
+
+
+
+app.add_url_rule('/login', view_func=login_view, methods=['GET', 'POST'])
 
 
 @app.route('/')
 @login_required
 def base_page():
-    logout_user()
     return redirect(url_for('login'))
 
 
