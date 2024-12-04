@@ -1,12 +1,11 @@
-from incialization_module import iniciation_view
-from init_app import db, admin, app
-import logging
+from setup_app import initialization_view
+from logger import setup_logging
+from init_app import admin, app, db
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logger = setup_logging(log_file_path='./logs/app.log', logger_name='app_logs')
 
 if __name__ == '__main__':
-    iniciation_view(session=db.session, admin=admin)
+    initialization_view(session=db.session, admin=admin)
     with app.app_context():
         db.create_all()
     app.run()

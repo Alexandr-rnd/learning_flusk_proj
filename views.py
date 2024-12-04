@@ -1,9 +1,3 @@
-from flask_admin.contrib.sqla import ModelView
-from flask_admin.contrib.sqla.fields import QuerySelectField
-from init_app import db, app
-from models import User, Role, Post
-
-from flask import render_template, request, redirect, url_for, flash
 from flask_login import logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from init_app import login_manager
@@ -11,37 +5,38 @@ from flask.views import MethodView
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_user
 
+from flask_admin.contrib.sqla import ModelView
+from flask_admin.contrib.sqla.fields import QuerySelectField
+from init_app import db, app
+from models import User, Role, Post
+
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-class UserQuerySelectField(QuerySelectField):
+class BaseQuerySelectField(QuerySelectField):
+    def iter_choices(self):
+        if self.allow_blank:
+            yield (u'__None', self.blank_text, self.data is None, {})
+
+        for pk, obj in self._get_object_list():
+            yield (pk, self.get_label(obj), pk == str(self.data), {})
+
+
+class RoleQuerySelectField(QuerySelectField, BaseQuerySelectField):
     def populate_obj(self, obj: User, name: str) -> None:
         obj.role_id = self.data.id
 
-    def iter_choices(self):
-        if self.allow_blank:
-            yield (u'__None', self.blank_text, self.data is None, {})
 
-        for pk, obj in self._get_object_list():
-            yield (pk, self.get_label(obj), pk == str(self.data), {})
-
-
-class AutorQuerySelectField(QuerySelectField):
+class AutorQuerySelectField(QuerySelectField, BaseQuerySelectField):
     def populate_obj(self, obj: Post, name: str) -> None:
         obj.author_id = self.data.id
 
-    def iter_choices(self):
-        if self.allow_blank:
-            yield (u'__None', self.blank_text, self.data is None, {})
-
-        for pk, obj in self._get_object_list():
-            yield (pk, self.get_label(obj), pk == str(self.data), {})
-
 
 class AdminModelView(ModelView):
+    @property
     def is_accessible(self):
         return current_user.is_authenticated and current_user.role.name == 'Admin'
 
@@ -142,7 +137,7 @@ class LoginView(MethodView):
         return render_template('login.html')
 
 
-
+login_view = LoginView.as_view('login')
 app.add_url_rule('/login', view_func=login_view, methods=['GET', 'POST'])
 
 

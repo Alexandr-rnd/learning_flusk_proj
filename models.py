@@ -1,5 +1,7 @@
-from init_app import db
 from flask_login import UserMixin
+
+from init_app import db
+
 
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
@@ -10,8 +12,10 @@ class User(db.Model, UserMixin):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True, default=None)
     role = db.relationship('Role', backref=db.backref('users'), foreign_keys=[role_id])
 
+    @property
     def is_active(self):
         return self.active
+
     def __str__(self):
         return self.username
 
@@ -23,6 +27,7 @@ class Role(db.Model):
 
     def __str__(self):
         return self.name
+
 
 class Post(db.Model):
     __tablename__ = 'posts'
